@@ -229,21 +229,19 @@ After you deploy this Partner Solution, confirm that your resources and services
 | Name | Version |
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 0.14 |
-| <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 5.10 |
-| <a name="requirement_helm"></a> [helm](#requirement\_helm) | >= 2.7.1 |
-| <a name="requirement_kubectl"></a> [kubectl](#requirement\_kubectl) | >= 1.14 |
-| <a name="requirement_kubernetes"></a> [kubernetes](#requirement\_kubernetes) | >= 2.16.1 |
-| <a name="requirement_random"></a> [random](#requirement\_random) | >= 3.4.3 |
-| <a name="requirement_template"></a> [template](#requirement\_template) | >= 2.2.0 |
+| <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 5.83 |
+| <a name="requirement_helm"></a> [helm](#requirement\_helm) | >= 2.13, < 3.0.0 |
+| <a name="requirement_kubernetes"></a> [kubernetes](#requirement\_kubernetes) | >= 2.29.0 |
+| <a name="requirement_random"></a> [random](#requirement\_random) | >= 3.6 |
 
 ## Providers
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | >= 5.10 |
-| <a name="provider_helm"></a> [helm](#provider\_helm) | >= 2.7.1 |
-| <a name="provider_kubernetes"></a> [kubernetes](#provider\_kubernetes) | >= 2.16.1 |
-| <a name="provider_random"></a> [random](#provider\_random) | >= 3.4.3 |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | >= 5.83 |
+| <a name="provider_helm"></a> [helm](#provider\_helm) | >= 2.13, < 3.0.0 |
+| <a name="provider_kubernetes"></a> [kubernetes](#provider\_kubernetes) | >= 2.29.0 |
+| <a name="provider_random"></a> [random](#provider\_random) | >= 3.6 |
 
 ## Modules
 
@@ -251,12 +249,11 @@ After you deploy this Partner Solution, confirm that your resources and services
 |------|--------|---------|
 | <a name="module_container_registry"></a> [container\_registry](#module\_container\_registry) | ./modules/container-registry | n/a |
 | <a name="module_databases"></a> [databases](#module\_databases) | ./modules/databases | n/a |
-| <a name="module_ebs_csi_driver_irsa"></a> [ebs\_csi\_driver\_irsa](#module\_ebs\_csi\_driver\_irsa) | terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks | ~> 5.20 |
-| <a name="module_eks_blueprints"></a> [eks\_blueprints](#module\_eks\_blueprints) | terraform-aws-modules/eks/aws | ~> 19.13 |
-| <a name="module_eks_blueprints_kubernetes_addons"></a> [eks\_blueprints\_kubernetes\_addons](#module\_eks\_blueprints\_kubernetes\_addons) | aws-ia/eks-blueprints-addons/aws | ~> 1.8.0 |
+| <a name="module_ebs_csi_driver_irsa"></a> [ebs\_csi\_driver\_irsa](#module\_ebs\_csi\_driver\_irsa) | terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks | ~> 5.39 |
+| <a name="module_eks_blueprints"></a> [eks\_blueprints](#module\_eks\_blueprints) | git::https://github.com/terraform-aws-modules/terraform-aws-eks.git?depth=1&ref=2cb1fac31b0fc2dd6a236b0c0678df75819c5a3b | n/a |
+| <a name="module_eks_blueprints_kubernetes_addons"></a> [eks\_blueprints\_kubernetes\_addons](#module\_eks\_blueprints\_kubernetes\_addons) | git::https://github.com/aws-ia/terraform-aws-eks-blueprints-addons.git?depth=1&ref=44f97ed77bc768cc026dd1102ca627659881b71b | n/a |
 | <a name="module_file_storage"></a> [file\_storage](#module\_file\_storage) | ./modules/file-storage | n/a |
 | <a name="module_monitoring"></a> [monitoring](#module\_monitoring) | ./modules/monitoring | n/a |
-| <a name="module_vpc"></a> [vpc](#module\_vpc) | ./modules/vpc | n/a |
 
 ## Resources
 
@@ -271,8 +268,9 @@ After you deploy this Partner Solution, confirm that your resources and services
 | [aws_route53_zone.cluster_dns](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route53_zone) | resource |
 | [helm_release.mendix_installer](https://registry.terraform.io/providers/hashicorp/helm/latest/docs/resources/release) | resource |
 | [kubernetes_namespace.mendix](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/resources/namespace) | resource |
-| [random_string.random_eks_suffix](https://registry.terraform.io/providers/hashicorp/random/latest/docs/resources/string) | resource |
+| [random_pet.random_eks_suffix](https://registry.terraform.io/providers/hashicorp/random/latest/docs/resources/pet) | resource |
 | [aws_caller_identity.current](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/caller_identity) | data source |
+| [aws_eks_addon_version.adot](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/eks_addon_version) | data source |
 | [aws_eks_cluster_auth.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/eks_cluster_auth) | data source |
 
 ## Inputs
@@ -285,12 +283,15 @@ After you deploy this Partner Solution, confirm that your resources and services
 | <a name="input_namespace_id"></a> [namespace\_id](#input\_namespace\_id) | Mendix Private Cloud Namespace ID | `string` | n/a | yes |
 | <a name="input_namespace_secret"></a> [namespace\_secret](#input\_namespace\_secret) | Mendix Private Cloud Namespace Secret | `string` | n/a | yes |
 | <a name="input_s3_bucket_name"></a> [s3\_bucket\_name](#input\_s3\_bucket\_name) | S3 bucket name | `string` | n/a | yes |
-| <a name="input_allowed_ips"></a> [allowed\_ips](#input\_allowed\_ips) | List of IP adresses allowed to access EKS cluster endpoint | `list(string)` | <pre>[<br>  "0.0.0.0/0"<br>]</pre> | no |
+| <a name="input_vpc_id"></a> [vpc\_id](#input\_vpc\_id) | The VPC ID where the EKS cluster will be deployed. | `string` | n/a | yes |
+| <a name="input_vpc_private_subnets"></a> [vpc\_private\_subnets](#input\_vpc\_private\_subnets) | A list of private subnet IDs within the specified VPC for the EKS cluster. | `list(string)` | n/a | yes |
+| <a name="input_allowed_ips"></a> [allowed\_ips](#input\_allowed\_ips) | List of IP adresses allowed to access EKS cluster endpoint | `list(string)` | <pre>[<br/>  "0.0.0.0/0"<br/>]</pre> | no |
 | <a name="input_eks_cluster_name_prefix"></a> [eks\_cluster\_name\_prefix](#input\_eks\_cluster\_name\_prefix) | EKS name prefix for the new cluster | `string` | `"mendix-eks"` | no |
 | <a name="input_eks_node_instance_type"></a> [eks\_node\_instance\_type](#input\_eks\_node\_instance\_type) | EKS instance type | `string` | `"t3.medium"` | no |
-| <a name="input_environments_internal_names"></a> [environments\_internal\_names](#input\_environments\_internal\_names) | List of internal environments names | `list(string)` | <pre>[<br>  "app1"<br>]</pre> | no |
-| <a name="input_mendix_operator_version"></a> [mendix\_operator\_version](#input\_mendix\_operator\_version) | Mendix Private Cloud Operator version | `string` | `"2.13.0"` | no |
-| <a name="input_postgres_version"></a> [postgres\_version](#input\_postgres\_version) | The version of Postgres that terraform would create. | `string` | `"14.8"` | no |
+| <a name="input_eks_version"></a> [eks\_version](#input\_eks\_version) | The version of EKS that terraform would create. | `string` | `"1.31"` | no |
+| <a name="input_environments_internal_names"></a> [environments\_internal\_names](#input\_environments\_internal\_names) | List of internal environments names | `list(string)` | <pre>[<br/>  "app1"<br/>]</pre> | no |
+| <a name="input_mendix_operator_version"></a> [mendix\_operator\_version](#input\_mendix\_operator\_version) | Mendix Private Cloud Operator version | `string` | `"2.20.1"` | no |
+| <a name="input_postgres_version"></a> [postgres\_version](#input\_postgres\_version) | The version of Postgres that terraform would create. | `string` | `"14.15"` | no |
 
 ## Outputs
 

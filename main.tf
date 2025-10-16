@@ -1,21 +1,13 @@
 locals {
-  cluster_name = "${var.eks_cluster_name_prefix}-${random_string.random_eks_suffix.result}"
+  cluster_name = "${var.eks_cluster_name_prefix}-${random_pet.random_eks_suffix.result}"
 }
 
-resource "random_string" "random_eks_suffix" {
-  length    = 3
-  min_lower = 3
-  special   = false
+resource "random_pet" "random_eks_suffix" {
+  length    = 2
 }
 
 data "aws_eks_cluster_auth" "this" {
   name = module.eks_blueprints.cluster_name
-}
-
-module "vpc" {
-  source       = "./modules/vpc"
-  region       = var.aws_region
-  cluster_name = local.cluster_name
 }
 
 resource "aws_route53_zone" "cluster_dns" {
@@ -33,7 +25,7 @@ module "databases" {
 
   source                            = "./modules/databases"
   identifier                        = "${local.cluster_name}-database-${each.key}"
-  subnets                           = module.vpc.vpc_private_subnets
+  subnets                           = var.vpc_private_subnets # TODO: consider using different subnets from EKS cluster
   postgres_version                  = var.postgres_version
   cluster_primary_security_group_id = module.eks_blueprints.cluster_primary_security_group_id
 }
@@ -107,16 +99,15 @@ resource "aws_ebs_encryption_by_default" "ebs_encryption" {
 }
 
 module "eks_blueprints" {
-  source  = "terraform-aws-modules/eks/aws"
-  version = "~> 19.21"
+  source  = "git::https://github.com/terraform-aws-modules/terraform-aws-eks.git?depth=1&ref=2cb1fac31b0fc2dd6a236b0c0678df75819c5a3b" # v19.21.0
 
   # EKS CLUSTER
   cluster_name    = local.cluster_name
   cluster_version = var.eks_version
-  vpc_id          = module.vpc.vpc_id
-  subnet_ids      = module.vpc.vpc_private_subnets
+  vpc_id          = var.vpc_id
+  subnet_ids      = var.vpc_private_subnets
 
-  cluster_endpoint_public_access       = true
+  cluster_endpoint_public_access       = false
   cluster_endpoint_private_access      = true
   cluster_endpoint_public_access_cidrs = var.allowed_ips
 
@@ -134,7 +125,7 @@ module "eks_blueprints" {
 
       node_group_name = "managed-ondemand"
       instance_types  = [var.eks_node_instance_type]
-      subnet_ids      = module.vpc.vpc_private_subnets
+      subnet_ids      = var.vpc_private_subnets
       public_ip       = false
       disk_size       = 25
     }
@@ -142,8 +133,7 @@ module "eks_blueprints" {
 }
 
 module "eks_blueprints_kubernetes_addons" {
-  source  = "aws-ia/eks-blueprints-addons/aws"
-  version = ">= 1.21.0, < 2.0.0"
+  source  = "git::https://github.com/aws-ia/terraform-aws-eks-blueprints-addons.git?depth=1&ref=44f97ed77bc768cc026dd1102ca627659881b71b" # v1.22.0
 
   cluster_name      = module.eks_blueprints.cluster_name
   cluster_endpoint  = module.eks_blueprints.cluster_endpoint
@@ -162,7 +152,7 @@ module "eks_blueprints_kubernetes_addons" {
   # Add-ons
   enable_aws_load_balancer_controller = true
   aws_load_balancer_controller = {
-    chart_version = "1.6.1"
+    chart_version = "1.6.1" # TODO: latest is v1.14.0, but needs testing
     set = [{
       name  = "enableServiceMutatorWebhook"
       value = "false"
@@ -244,7 +234,7 @@ resource "helm_release" "mendix_installer" {
         namespace_id                       = var.namespace_id,
         namespace_secret                   = sensitive(var.namespace_secret),
         mendix_operator_version            = var.mendix_operator_version,
-        aws_region                         = module.vpc.region,
+        aws_region                         = var.aws_region,
         certificate_expiration_email       = var.certificate_expiration_email
         s3_bucket_name                     = var.s3_bucket_name
         environment_iam_template_policy    = aws_iam_policy.environment_policy.arn
@@ -263,13 +253,22 @@ resource "helm_release" "mendix_installer" {
     })
   ]
 
-  depends_on = [module.eks_blueprints, module.eks_blueprints_kubernetes_addons]
+  depends_on = [
+    module.eks_blueprints,
+    module.eks_blueprints_kubernetes_addons,
+    kubernetes_namespace.mendix,
+  ]
+}
+
+data "aws_eks_addon_version" "adot" {
+  addon_name = "adot"
+  kubernetes_version = module.eks_blueprints.cluster_version
 }
 
 resource "aws_eks_addon" "adot_addon" {
   cluster_name  = module.eks_blueprints.cluster_name
   addon_name    = "adot"
-  addon_version = "v0.109.0-eksbuild.2"
+  addon_version = data.aws_eks_addon_version.adot.version
 
   depends_on = [module.eks_blueprints, module.eks_blueprints_kubernetes_addons]
 }
