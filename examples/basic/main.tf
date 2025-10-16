@@ -10,6 +10,10 @@ module "mendix_private_cloud_example" {
   namespace_secret             = var.namespace_secret
   mendix_operator_version      = var.mendix_operator_version
   environments_internal_names  = var.environments_internal_names
+  postgres_version             = var.postgres_version
+  eks_version                  = var.eks_version
+  vpc_id                       = var.vpc_id
+  vpc_private_subnets          = var.vpc_private_subnets
 }
 
 provider "aws" {}
