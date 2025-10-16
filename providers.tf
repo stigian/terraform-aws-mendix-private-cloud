@@ -1,14 +1,5 @@
 terraform {
-  backend "s3" {
-    region         = ""
-    bucket         = ""
-    key            = "terraform.tfstate"
-    dynamodb_table = ""
-    encrypt        = true
-  }
-
   required_version = ">= 0.14"
-
 
   required_providers {
     aws = {
