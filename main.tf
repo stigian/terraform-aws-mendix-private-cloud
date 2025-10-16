@@ -1,5 +1,5 @@
 locals {
-  cluster_name = "${var.eks_cluster_name_prefix}-${random_pet.random_eks_suffix.result}"
+  cluster_name = "${var.eks_cluster_name_prefix}-${random_pet.random_eks_suffix.id}"
 }
 
 resource "random_pet" "random_eks_suffix" {
