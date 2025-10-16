@@ -3,7 +3,7 @@ locals {
 }
 
 resource "random_pet" "random_eks_suffix" {
-  length    = 2
+  length = 2
 }
 
 data "aws_eks_cluster_auth" "this" {
@@ -99,7 +99,7 @@ resource "aws_ebs_encryption_by_default" "ebs_encryption" {
 }
 
 module "eks_blueprints" {
-  source  = "git::https://github.com/terraform-aws-modules/terraform-aws-eks.git?depth=1&ref=2cb1fac31b0fc2dd6a236b0c0678df75819c5a3b" # v19.21.0
+  source = "git::https://github.com/terraform-aws-modules/terraform-aws-eks.git?ref=2cb1fac31b0fc2dd6a236b0c0678df75819c5a3b" # v19.21.0
 
   # EKS CLUSTER
   cluster_name    = local.cluster_name
@@ -133,7 +133,7 @@ module "eks_blueprints" {
 }
 
 module "eks_blueprints_kubernetes_addons" {
-  source  = "git::https://github.com/aws-ia/terraform-aws-eks-blueprints-addons.git?depth=1&ref=44f97ed77bc768cc026dd1102ca627659881b71b" # v1.22.0
+  source = "git::https://github.com/aws-ia/terraform-aws-eks-blueprints-addons.git?ref=44f97ed77bc768cc026dd1102ca627659881b71b" # v1.22.0
 
   cluster_name      = module.eks_blueprints.cluster_name
   cluster_endpoint  = module.eks_blueprints.cluster_endpoint
@@ -261,7 +261,7 @@ resource "helm_release" "mendix_installer" {
 }
 
 data "aws_eks_addon_version" "adot" {
-  addon_name = "adot"
+  addon_name         = "adot"
   kubernetes_version = module.eks_blueprints.cluster_version
 }
 
@@ -274,8 +274,7 @@ resource "aws_eks_addon" "adot_addon" {
 }
 
 module "ebs_csi_driver_irsa" {
-  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version = "~> 5.39"
+  source  = "git://https://github.com/terraform-aws-modules/terraform-aws-iam//modules/iam-role-for-service-accounts-eks?ref=c29ec1ed409683086f63f83ff5b10a6f3c296ef2" # v.5.60.0
 
   role_name_prefix = "${module.eks_blueprints.cluster_name}-ebs-csi-driver-"
 
