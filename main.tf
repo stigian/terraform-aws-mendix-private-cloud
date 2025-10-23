@@ -106,11 +106,9 @@ module "eks_blueprints" {
   vpc_id          = var.vpc_id
   subnet_ids      = var.vpc_private_subnets
 
-  cluster_endpoint_public_access       = false
-  cluster_endpoint_private_access      = true
-  cluster_endpoint_public_access_cidrs = var.allowed_ips
-
-  create_node_security_group = false
+  cluster_endpoint_public_access  = false
+  cluster_endpoint_private_access = true
+  create_node_security_group      = false
 
   eks_managed_node_groups = {
     t3_medium = {
