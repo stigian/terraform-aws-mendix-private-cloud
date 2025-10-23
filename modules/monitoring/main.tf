@@ -203,7 +203,7 @@ module "adot_collector_irsa" {
   source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
   version = "~> 5.20"
 
-  role_name_prefix = "${var.cluster_name}-adot-collector"
+  role_name_prefix = "mendix-adot-collector-"
 
   role_policy_arns = {
     prometheus  = "arn:aws:iam::aws:policy/AmazonPrometheusRemoteWriteAccess",
