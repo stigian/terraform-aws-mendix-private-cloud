@@ -273,7 +273,7 @@ resource "aws_eks_addon" "adot_addon" {
 module "ebs_csi_driver_irsa" {
   source = "git::https://github.com/terraform-aws-modules/terraform-aws-iam//modules/iam-role-for-service-accounts-eks?ref=c29ec1ed409683086f63f83ff5b10a6f3c296ef2" # v.5.60.0
 
-  role_name_prefix = "${module.eks_blueprints.cluster_name}-ebs-csi-driver-"
+  role_name_prefix = "mendix-ebs-csi-driver-"
 
   attach_ebs_csi_policy = true
 
