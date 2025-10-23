@@ -101,9 +101,8 @@ resource "aws_ebs_encryption_by_default" "ebs_encryption" {
 module "eks_blueprints" {
   source = "git::https://github.com/terraform-aws-modules/terraform-aws-eks.git?ref=2cb1fac31b0fc2dd6a236b0c0678df75819c5a3b" # v19.21.0
 
-  # EKS CLUSTER
   cluster_name    = local.cluster_name
-  cluster_version = var.eks_version
+  cluster_version = var.kubernetes_version
   vpc_id          = var.vpc_id
   subnet_ids      = var.vpc_private_subnets
 
@@ -113,9 +112,9 @@ module "eks_blueprints" {
 
   create_node_security_group = false
 
-  # EKS MANAGED NODE GROUPS
   eks_managed_node_groups = {
     t3_medium = {
+      ami_type     = "BOTTLEROCKET_x86_64_FIPS"
       min_size     = 3
       max_size     = 3
       desired_size = 3
@@ -216,49 +215,49 @@ module "monitoring" {
   depends_on = [module.eks_blueprints_kubernetes_addons, aws_eks_addon.adot_addon]
 }
 
-resource "kubernetes_namespace" "mendix" {
-  metadata {
-    name = "mendix"
-  }
-}
+# resource "kubernetes_namespace" "privateplatform" {
+#   metadata {
+#     name = "privateplatform"
+#   }
+# }
 
-resource "helm_release" "mendix_installer" {
-  name      = "mendixinstaller"
-  chart     = "${path.module}/charts/mendix-installer"
-  namespace = "mendix"
-  values = [
-    templatefile("${path.module}/helm-values/mendix-installer-values.yaml.tpl",
-      {
-        cluster_name                       = local.cluster_name,
-        account_id                         = data.aws_caller_identity.current.account_id,
-        namespace_id                       = var.namespace_id,
-        namespace_secret                   = sensitive(var.namespace_secret),
-        mendix_operator_version            = var.mendix_operator_version,
-        aws_region                         = var.aws_region,
-        certificate_expiration_email       = var.certificate_expiration_email
-        s3_bucket_name                     = var.s3_bucket_name
-        environment_iam_template_policy    = aws_iam_policy.environment_policy.arn
-        storage_provisioner_iam_admin_role = aws_iam_role.storage_provisioner_role.arn
-        oidc_url                           = "https://${module.eks_blueprints.oidc_provider}"
-        database_server_addresses          = [for value in values(module.databases) : tostring(value.database_server_address[0])]
-        database_ports                     = [for value in values(module.databases) : tostring(value.database_port[0])]
-        database_usernames                 = [for value in values(module.databases) : tostring(value.database_username[0])]
-        database_names                     = [for value in values(module.databases) : tostring(value.database_name[0])]
-        database_passwords                 = [for value in values(module.databases) : tostring(value.database_password[0])]
-        registry_pullurl                   = module.container_registry.container_registry_hostname,
-        registry_repository                = module.container_registry.container_registry_name,
-        registry_iam_role                  = module.container_registry.container_irsa_role_arn,
-        ingress_domainname                 = var.domain_name,
-        environments_internal_names        = var.environments_internal_names
-    })
-  ]
+# resource "helm_release" "mendix_installer" {
+#   name      = "mendixinstaller"
+#   chart     = "${path.module}/charts/mendix-installer"
+#   namespace = "mendix"
+#   values = [
+#     templatefile("${path.module}/helm-values/mendix-installer-values.yaml.tpl",
+#       {
+#         cluster_name                       = local.cluster_name,
+#         account_id                         = data.aws_caller_identity.current.account_id,
+#         namespace_id                       = var.namespace_id,
+#         namespace_secret                   = sensitive(var.namespace_secret),
+#         mendix_operator_version            = var.mendix_operator_version,
+#         aws_region                         = var.aws_region,
+#         certificate_expiration_email       = var.certificate_expiration_email
+#         s3_bucket_name                     = var.s3_bucket_name
+#         environment_iam_template_policy    = aws_iam_policy.environment_policy.arn
+#         storage_provisioner_iam_admin_role = aws_iam_role.storage_provisioner_role.arn
+#         oidc_url                           = "https://${module.eks_blueprints.oidc_provider}"
+#         database_server_addresses          = [for value in values(module.databases) : tostring(value.database_server_address[0])]
+#         database_ports                     = [for value in values(module.databases) : tostring(value.database_port[0])]
+#         database_usernames                 = [for value in values(module.databases) : tostring(value.database_username[0])]
+#         database_names                     = [for value in values(module.databases) : tostring(value.database_name[0])]
+#         database_passwords                 = [for value in values(module.databases) : tostring(value.database_password[0])]
+#         registry_pullurl                   = module.container_registry.container_registry_hostname,
+#         registry_repository                = module.container_registry.container_registry_name,
+#         registry_iam_role                  = module.container_registry.container_irsa_role_arn,
+#         ingress_domainname                 = var.domain_name,
+#         environments_internal_names        = var.environments_internal_names
+#     })
+#   ]
 
-  depends_on = [
-    module.eks_blueprints,
-    module.eks_blueprints_kubernetes_addons,
-    kubernetes_namespace.mendix,
-  ]
-}
+#   depends_on = [
+#     module.eks_blueprints,
+#     module.eks_blueprints_kubernetes_addons,
+#     kubernetes_namespace.mendix,
+#   ]
+# }
 
 data "aws_eks_addon_version" "adot" {
   addon_name         = "adot"
@@ -274,7 +273,7 @@ resource "aws_eks_addon" "adot_addon" {
 }
 
 module "ebs_csi_driver_irsa" {
-  source  = "git::https://github.com/terraform-aws-modules/terraform-aws-iam//modules/iam-role-for-service-accounts-eks?ref=c29ec1ed409683086f63f83ff5b10a6f3c296ef2" # v.5.60.0
+  source = "git::https://github.com/terraform-aws-modules/terraform-aws-iam//modules/iam-role-for-service-accounts-eks?ref=c29ec1ed409683086f63f83ff5b10a6f3c296ef2" # v.5.60.0
 
   role_name_prefix = "${module.eks_blueprints.cluster_name}-ebs-csi-driver-"
 

@@ -70,14 +70,14 @@ variable "environments_internal_names" {
 
 variable "postgres_version" {
   type        = string
-  description = "The version of Postgres that terraform would create."
+  description = "The version of Postgres to deploy"
   default     = "14.15"
 }
 
-variable "eks_version" {
+variable "kubernetes_version" {
   type        = string
-  description = "The version of EKS that terraform would create."
-  default     = "1.31"
+  description = "The version of Kubernetes to deploy"
+  default     = "1.33"
 }
 
 variable "vpc_id" {
