@@ -16,11 +16,13 @@ variable "s3_bucket_name" {
 variable "namespace_id" {
   type        = string
   description = "Mendix Private Cloud Namespace ID"
+  default     = ""
 }
 
 variable "namespace_secret" {
   type        = string
   description = "Mendix Private Cloud Namespace Secret"
+  default     = ""
 }
 
 variable "eks_node_instance_type" {
