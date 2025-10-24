@@ -121,10 +121,10 @@ module "eks_blueprints" {
   aws_auth_roles = [
     {
       rolearn = format(
-        "%s/%s",
-        split("/", data.aws_iam_roles.roles.arns[0])[0],
-        element(split("/", data.aws_iam_roles.roles.arns[0]), length(split("/", data.aws_iam_roles.roles.arns[0])) - 1)
-      )
+      "%s/%s",
+      split("/", one(data.aws_iam_roles.roles.arns))[0],
+      element(split("/", one(data.aws_iam_roles.roles.arns)), length(split("/", one(data.aws_iam_roles.roles.arns))) - 1)
+    )
       username = "aws-sso-admin"
       groups   = ["system:masters"]
     },
