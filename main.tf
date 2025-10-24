@@ -111,6 +111,7 @@ module "eks_blueprints" {
   cluster_endpoint_public_access_cidrs = var.allowed_ips
 
   create_node_security_group = false
+  manage_aws_auth_configmap  = true
 
   eks_managed_node_groups = {
     t3_medium = {
