@@ -98,6 +98,11 @@ resource "aws_ebs_encryption_by_default" "ebs_encryption" {
   enabled = true
 }
 
+data "aws_iam_roles" "roles" {
+  name_regex  = "AWSReservedSSO_${var.sso_permission_set_name}_.*"
+  path_prefix = "/aws-reserved/sso.amazonaws.com/"
+}
+
 module "eks_blueprints" {
   source = "git::https://github.com/terraform-aws-modules/terraform-aws-eks.git?ref=2cb1fac31b0fc2dd6a236b0c0678df75819c5a3b" # v19.21.0
 
@@ -112,9 +117,21 @@ module "eks_blueprints" {
 
   create_node_security_group = false
   manage_aws_auth_configmap  = true
+  # Grant access to the EKS cluster to the SSO permission set role specified
+  aws_auth_roles = [
+    {
+      rolearn = format(
+        "%s/%s",
+        split("/", data.aws_iam_roles.roles.arns[0])[0],
+        element(split("/", data.aws_iam_roles.roles.arns[0]), length(split("/", data.aws_iam_roles.roles.arns[0])) - 1)
+      )
+      username = "aws-sso-admin"
+      groups   = ["system:masters"]
+    },
+  ]
 
   eks_managed_node_groups = {
-    t3_medium = {
+    mendix-mng = {
       ami_type     = "BOTTLEROCKET_x86_64_FIPS"
       min_size     = 3
       max_size     = 3
@@ -123,7 +140,7 @@ module "eks_blueprints" {
       attach_cluster_primary_security_group = true
       vpc_security_group_ids                = [module.eks_blueprints.cluster_primary_security_group_id]
 
-      node_group_name = "managed-ondemand"
+      node_group_name = "managed-mng"
       instance_types  = [var.eks_node_instance_type]
       subnet_ids      = var.vpc_private_subnets
       public_ip       = false

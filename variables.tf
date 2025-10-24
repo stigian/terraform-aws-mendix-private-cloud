@@ -91,3 +91,10 @@ variable "vpc_private_subnets" {
   type        = list(string)
   description = "A list of private subnet IDs within the specified VPC for the EKS cluster."
 }
+
+# TODO: use `access_entries` instead of auth_configmap with v20+ of the terraform-aws-eks module
+variable "sso_permission_set_name" {
+  type        = string
+  description = "The SSO permission set name to be granted access to the EKS cluster via the auth configmap."
+  default     = "AdministratorAccess"
+}
