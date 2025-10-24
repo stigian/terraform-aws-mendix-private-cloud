@@ -98,11 +98,6 @@ resource "aws_ebs_encryption_by_default" "ebs_encryption" {
   enabled = true
 }
 
-data "aws_iam_roles" "aws_sso_admin" {
-  name_regex  = ".*/AWSReservedSSO_${var.sso_permission_set_name}_.*"
-  path_prefix = "/aws-reserved/sso.amazonaws.com/"
-}
-
 module "eks_blueprints" {
   source = "git::https://github.com/terraform-aws-modules/terraform-aws-eks.git?ref=2cb1fac31b0fc2dd6a236b0c0678df75819c5a3b" # v19.21.0
 
@@ -117,14 +112,9 @@ module "eks_blueprints" {
 
   create_node_security_group = false
   manage_aws_auth_configmap  = true
-  # Grant access to the EKS cluster to the SSO permission set role specified
   aws_auth_roles = [
     {
-      rolearn = format(
-      "%s/%s",
-      split("/", one(data.aws_iam_roles.aws_sso_admin.arns))[0],
-      element(split("/", one(data.aws_iam_roles.aws_sso_admin.arns)), length(split("/", one(data.aws_iam_roles.aws_sso_admin.arns))) - 1)
-    )
+      rolearn = var.aws_sso_admin_role_arn
       username = "aws-sso-admin"
       groups   = ["system:masters"]
     },

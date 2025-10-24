@@ -93,8 +93,7 @@ variable "vpc_private_subnets" {
 }
 
 # TODO: use `access_entries` instead of auth_configmap with v20+ of the terraform-aws-eks module
-variable "sso_permission_set_name" {
+variable "aws_sso_admin_role_arn" {
   type        = string
-  description = "The SSO permission set name to be granted access to the EKS cluster via the auth configmap."
-  default     = "AdministratorAccess"
+  description = "The SSO admin role ARN to be granted access to the EKS cluster via the auth configmap."
 }
