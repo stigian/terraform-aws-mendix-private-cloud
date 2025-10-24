@@ -98,8 +98,8 @@ resource "aws_ebs_encryption_by_default" "ebs_encryption" {
   enabled = true
 }
 
-data "aws_iam_roles" "roles" {
-  name_regex  = "AWSReservedSSO_${var.sso_permission_set_name}_.*"
+data "aws_iam_roles" "aws_sso_admin" {
+  name_regex  = ".*/AWSReservedSSO_${var.sso_permission_set_name}_.*"
   path_prefix = "/aws-reserved/sso.amazonaws.com/"
 }
 
