@@ -1,12 +1,12 @@
-namespaceID: "${namespace_id}"
-namespaceSecret: "${namespace_secret}"
+# namespaceID: "${namespace_id}"
+# namespaceSecret: "${namespace_secret}"
 mendixOperatorVersion: "${mendix_operator_version}"
 awsRegion: "${aws_region}"
 certificateExpirationEmail: "${certificate_expiration_email}"
 registry:
-      pullUrl: "${registry_pullurl}"
-      repositoryName: "${registry_repository}"
-      iamRole: "${registry_iam_role}"
+    pullUrl: "${registry_pullurl}"
+    repositoryName: "${registry_repository}"
+    iamRole: "${registry_iam_role}"
 ingress:
     className: "nginx"
     domainName: "${ingress_domainname}"
