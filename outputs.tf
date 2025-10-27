@@ -4,6 +4,11 @@ output "cluster_name" {
   value       = local.cluster_name
 }
 
+output "cluster_certificate_authority_data" {
+  description = "Kubernetes cluster certificate authority data"
+  value       = module.eks_blueprints.cluster_certificate_authority_data
+}
+
 # Container Registry ECR output
 output "container_registry_url" {
   description = "Elatic Container Registry URL"
