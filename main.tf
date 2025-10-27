@@ -117,7 +117,7 @@ module "eks_blueprints" {
   manage_aws_auth_configmap  = true
   aws_auth_roles = [
     {
-      rolearn  = var.aws_sso_admin_role_arn
+      rolearn  = var.eks_cluster_admin_role_arn
       username = "aws-sso-admin"
       groups   = ["system:masters"]
     },
