@@ -1,5 +1,3 @@
-# namespaceID: "${namespace_id}"
-# namespaceSecret: "${namespace_secret}"
 mendixOperatorVersion: "${mendix_operator_version}"
 awsRegion: "${aws_region}"
 certificateExpirationEmail: "${certificate_expiration_email}"
