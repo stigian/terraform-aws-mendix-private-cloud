@@ -4,6 +4,11 @@ output "cluster_name" {
   value       = local.cluster_name
 }
 
+output "cluster_endpoint" {
+  description = "Kubernetes cluster endpoint"
+  value       = module.eks_blueprints.cluster_endpoint
+}
+
 output "cluster_certificate_authority_data" {
   description = "Kubernetes cluster certificate authority data"
   value       = module.eks_blueprints.cluster_certificate_authority_data
