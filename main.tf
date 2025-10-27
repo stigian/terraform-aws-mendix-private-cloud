@@ -110,13 +110,8 @@ module "eks_blueprints" {
   cluster_endpoint_private_access      = true
   cluster_endpoint_public_access_cidrs = var.allowed_ips
 
-  # KMS key configuration for more permissive access
-  kms_key_administrators = [
-    var.aws_sso_admin_role_arn
-  ]
-  kms_key_users = [
-    var.aws_sso_admin_role_arn
-  ]
+  kms_key_administrators = var.kms_key_admin_arns_list
+  kms_key_users          = var.kms_key_user_arns_list
 
   create_node_security_group = false
   manage_aws_auth_configmap  = true

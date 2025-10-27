@@ -97,3 +97,16 @@ variable "aws_sso_admin_role_arn" {
   type        = string
   description = "The SSO admin role ARN to be granted access to the EKS cluster via the auth configmap."
 }
+
+
+variable "kms_key_admin_arns_list" {
+  type        = list(string)
+  description = "List of ARNs for KMS key administrators."
+  default     = []
+}
+
+variable "kms_key_user_arns_list" {
+  type        = list(string)
+  description = "List of ARNs for KMS key users."
+  default     = []
+}
