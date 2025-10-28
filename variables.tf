@@ -113,7 +113,7 @@ variable "kms_key_user_arns_list" {
 }
 
 variable "cluster_security_group_additional_rules" {
-  type = list(object({
+  type = map(object({
     type                     = string
     from_port                = number
     to_port                  = number
@@ -124,11 +124,11 @@ variable "cluster_security_group_additional_rules" {
     description              = string
   }))
   description = "Additional security group rules to add to the EKS cluster security group. Must specify exactly one of: cidr_blocks, source_security_group_id, or self."
-  default     = []
+  default     = {}
 
   validation {
     condition = alltrue([
-      for rule in var.cluster_security_group_additional_rules :
+      for rule in values(var.cluster_security_group_additional_rules) :
       length(compact([
         rule.cidr_blocks != null ? "cidr" : null,
         rule.source_security_group_id != null ? "sg" : null,
