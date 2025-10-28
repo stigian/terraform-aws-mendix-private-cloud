@@ -111,3 +111,30 @@ variable "kms_key_user_arns_list" {
   description = "List of ARNs for KMS key users."
   default     = []
 }
+
+variable "cluster_security_group_additional_rules" {
+  type = list(object({
+    type                     = string
+    from_port                = number
+    to_port                  = number
+    protocol                 = string
+    cidr_blocks              = optional(list(string))
+    source_security_group_id = optional(string)
+    self                     = optional(bool)
+    description              = string
+  }))
+  description = "Additional security group rules to add to the EKS cluster security group. Must specify exactly one of: cidr_blocks, source_security_group_id, or self."
+  default     = []
+
+  validation {
+    condition = alltrue([
+      for rule in var.cluster_security_group_additional_rules :
+      length(compact([
+        rule.cidr_blocks != null ? "cidr" : null,
+        rule.source_security_group_id != null ? "sg" : null,
+        rule.self == true ? "self" : null
+      ])) == 1
+    ])
+    error_message = "Each security group rule must specify exactly one of cidr_blocks, source_security_group_id, or self, but not multiple."
+  }
+}
