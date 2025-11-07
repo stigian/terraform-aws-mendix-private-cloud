@@ -193,7 +193,7 @@ module "eks_blueprints_kubernetes_addons" {
     })]
   }
 
-  enable_ingress_nginx = true
+  enable_ingress_nginx = false
   ingress_nginx = {
     values = [templatefile("${path.module}/helm-values/nginx-values.yaml", {
       hostname = var.domain_name
