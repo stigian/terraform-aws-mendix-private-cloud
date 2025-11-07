@@ -75,6 +75,19 @@ resource "aws_iam_role" "storage_provisioner_role" {
             "${module.eks_blueprints.oidc_provider}:sub" : "system:serviceaccount:mendix:mendix-storage-provisioner"
           }
         }
+      },
+      {
+        "Effect" : "Allow",
+        "Principal" : {
+          "Federated" : "arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/${module.eks_blueprints.oidc_provider}"
+        },
+        "Action" : "sts:AssumeRoleWithWebIdentity",
+        "Condition" : {
+          "StringEquals" : {
+            "${module.eks_blueprints.oidc_provider}:aud" : "sts.amazonaws.com",
+            "${module.eks_blueprints.oidc_provider}:sub" : "system:serviceaccount:mendix:default"
+          }
+        }
       }
     ]
   })
