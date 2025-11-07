@@ -113,9 +113,9 @@ module "eks_blueprints" {
   kms_key_administrators = var.kms_key_admin_arns_list
   kms_key_users          = var.kms_key_user_arns_list
 
-  create_node_security_group = false
+  create_node_security_group              = false
   cluster_security_group_additional_rules = var.cluster_security_group_additional_rules
-  manage_aws_auth_configmap  = true
+  manage_aws_auth_configmap               = true
   aws_auth_roles = [
     for idx, role_arn in var.eks_cluster_admin_role_arns : {
       rolearn  = role_arn
