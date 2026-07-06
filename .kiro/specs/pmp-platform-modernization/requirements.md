@@ -4,11 +4,11 @@ Private Mendix Platform (PMP) on AWS: Modernization & Air-Gapped Delivery
 
 ## Introduction
 
-This feature modernizes the existing `terraform-aws-mendix-private-cloud` module (currently on the `dev/pmp` branch) to meet the Mendix Private Mendix Platform (PMP) **Partner Certification** requirements and bring the AWS infrastructure up to current best practices. The complementary **agentic deployment helper** (MCP servers, crewAI flows, Kiro steering) is specified separately in `pmp-agentic-deployment-helper` and is out of scope here, so this platform remains usable without any AI tooling.
+This feature modernizes the existing `terraform-aws-mendix-private-cloud` module (currently on the `dev/pmp` branch) to meet the Mendix Private Mendix Platform (PMP) **Partner Certification** requirements and bring the AWS infrastructure up to current best practices.
 
 The certification exercise requires a working, **air-gapped** PMP instance integrated with Source Control (git), Single Sign-On (SAML/OIDC), and CI/CD (OOTB or integrated), plus an end-to-end Mendix app development and deployment lifecycle from Studio Pro to the target cluster. See `partner-presentation/PMP-Partner Certification Exercise.md` for the source requirements.
 
-Beyond the certification demo, this module is intended to be reusable for ordinary private Mendix deployments. It targets two network states — **`connected`** (outbound internet allowed, for iteration and learning) and **`airgapped`** (no internet egress; the cluster reaches only its own AWS partition's control plane via VPC endpoints). Air-gapped deployments look the same whether the partition is commercial, GovCloud, or a classified/isolated partition, so the module is written to be **partition-neutral**. The realistic reuse target is commercial and GovCloud (both of which offer EKS Auto Mode). The requirements are ordered to mirror the intended design and build-up order: connectivity framing first, then network, compute, identity, supply chain, secrets, platform install, app lifecycle, observability, automation, and finally migration and documentation.
+Beyond the certification demo, this module is intended to be reusable for ordinary private Mendix deployments. It targets two network states — **`connected`** (outbound internet allowed, for iteration and learning) and **`airgapped`** (no internet egress; the cluster reaches only its own AWS partition's control plane via VPC endpoints). The target partition set is **commercial (`aws`) and GovCloud (`aws-us-gov`)** only; both offer EKS Auto Mode (AWS announced Auto Mode in GovCloud in October 2025), which remains the single compute path. The module is still written to be **partition-neutral** because GovCloud requires `aws-us-gov` ARNs, service endpoints, and DNS suffixes to be derived dynamically rather than hardcoded. The requirements are ordered to mirror the intended design and build-up order: connectivity framing first, then network, compute, identity, supply chain, secrets, platform install, app lifecycle, observability, automation, and finally migration and documentation.
 
 ### Scope summary
 
@@ -16,20 +16,21 @@ In scope:
 - A two-state connectivity model (`connected` / `airgapped`) plus partition-neutral construction that the rest of the module keys off of.
 - An explicit, reusable VPC/networking module supporting both create-new and use-existing VPC.
 - Upgrade EKS to a modern, low-ops posture: EKS Auto Mode, `terraform-aws-eks` v20+, access entries.
+- Optional FIPS-compliant node cryptography, disabled by default for the demo but supported for government/regulated reuse.
 - SSO integration via a pluggable, external OIDC/SAML identity provider (module provisions none).
 - Vendoring/mirroring of all external dependencies (Terraform modules/providers, binaries, container images, Helm charts) into in-partition ECR/S3 for the air-gapped path.
 - Secrets management.
 - The PMP install/upgrade layer (helmfile-based) layered on top of the Terraform-provisioned foundation, driven through CI/CD since PMP updates on a recurring release cadence.
 - Wiring for the Mendix application build/deploy lifecycle (PMP OOTB Kubernetes-native CI/CD).
-- Observability stack compatible with PMP (Prometheus / Grafana / Loki).
+- Observability stack compatible with PMP (AWS Managed Service for Prometheus / Grafana / Loki).
 - CI/CD for the infrastructure, PMP layer, and app delivery using **self-hosted GitLab** (VCS + GitLab CI) deployed in-cluster, with policy gates. This is intended as reusable infra-CI/CD, not just a demo artifact.
 - Documentation and demo artifacts to support the certification presentation.
 
 Out of scope (this iteration):
-- The **agentic deployment/ops helper** (MCP servers + crewAI flows + Kiro steering). Specified separately in `pmp-agentic-deployment-helper`. The helper consumes this platform; it does not modify it.
 - Building the Mendix application model itself (Studio Pro modeling work).
 - Multi-region / multi-account landing-zone automation.
 - A non-Auto-Mode compute path (managed node groups / Karpenter). Auto Mode is available in the target partitions; a managed fallback is only a contingency if the Auto Mode POC fails (see Requirement 3), not a maintained path.
+- Optional PMP components not required by the certification exercise — Svix (webhooks), Maia (LLM assistant), PDF DocGen, and Marketplace — are excluded. Only PCLM plus the portal and build tooling are installed. Rationale: slide 22 of the certification exercise mandates only SCM/git, SSO (SAML/OIDC), CI/CD, and the end-to-end app lifecycle.
 - Production HA tuning beyond what the demo and cert require (documented as future work).
 
 ### Research-informed design context
@@ -60,7 +61,7 @@ Open questions to resolve in design (flagged, not yet decided):
 - **mxbuild** — The Mendix build tooling that compiles a project into an MDA.
 - **Studio Pro** — The Mendix low-code IDE where apps are modeled and committed to source control.
 - **Connectivity profile** — The network state a deployment targets: `connected` (internet egress allowed) or `airgapped` (no internet egress; partition control plane reached via VPC endpoints). See Requirement 1.
-- **Partition** — An AWS partition (`aws` commercial, `aws-us-gov` GovCloud, `aws-iso`/`aws-iso-b` isolated/Secret). Service, endpoint, AMI, and feature availability differ by partition; the module is written partition-neutrally.
+- **Partition** — An AWS partition. The target partitions for this module are `aws` (commercial) and `aws-us-gov` (GovCloud); service, endpoint, AMI, and feature availability differ between them, so the module is written partition-neutrally and derives partition-specific values dynamically.
 - **EKS Auto Mode** — AWS-managed EKS mode that provisions/manages nodes (Karpenter on Bottlerocket), networking, load balancing, and storage as core components. The single planned compute path.
 - **NodePool / NodeClass** — Auto Mode CRDs for customizing node provisioning and node networking/placement.
 - **Access entries** — The EKS API-based mechanism for granting IAM principals cluster access, replacing the `aws-auth` ConfigMap.
@@ -78,7 +79,7 @@ Open questions to resolve in design (flagged, not yet decided):
 
 ### Requirement 1: Deployment connectivity profile, operator mode, and partition neutrality
 
-**User Story:** As a platform engineer delivering into varied environments, I want one module that supports a connected-or-air-gapped network state and the appropriate Mendix operator registration mode, built partition-neutrally, so that the same codebase serves iteration in a connected account and air-gapped delivery in commercial, GovCloud, or classified partitions.
+**User Story:** As a platform engineer delivering into varied environments, I want one module that supports a connected-or-air-gapped network state and the appropriate Mendix operator registration mode, built partition-neutrally, so that the same codebase serves iteration in a connected account and air-gapped delivery in commercial and GovCloud partitions.
 
 #### Acceptance Criteria
 1. WHEN the module is configured THEN it SHALL expose a single documented `connectivity_profile` selector with two values: `connected` and `airgapped`.
@@ -88,8 +89,8 @@ Open questions to resolve in design (flagged, not yet decided):
 5. WHEN the module is configured THEN it SHALL expose a separate `operator_mode` variable with values `connected` and `standalone`, controlling whether `mxpc-cli` registers the cluster with the Mendix portal (`--clusterMode connected`) or operates without portal registration (`--clusterMode standalone`).
 6. WHEN `operator_mode` is `connected` THEN the module SHALL accept and pass `namespace_id` and `namespace_secret` to the installer (upstream pattern). WHEN `operator_mode` is `standalone` THEN those values SHALL be optional and the installer SHALL omit them from all `mxpc-cli` invocations (current `dev/pmp` pattern).
 7. WHEN the connectivity profile is `airgapped` THEN `operator_mode` SHALL be forced to `standalone` (the Mendix portal is unreachable), and the module SHALL emit a validation error if `operator_mode = connected` is explicitly set with the `airgapped` profile.
-8. WHEN the module runs in any partition (`aws`, `aws-us-gov`, `aws-iso`, `aws-iso-b`) THEN it SHALL NOT hardcode commercial ARNs, service endpoints, DNS suffixes, or AMI owners, and SHALL derive partition-specific values dynamically.
-9. WHERE a feature is unavailable in the target partition (e.g., AWS managed Prometheus) THE design SHALL document the gap and select the partition-appropriate alternative rather than failing silently.
+8. WHEN the module runs in either target partition (`aws`, `aws-us-gov`) THEN it SHALL NOT hardcode commercial ARNs, service endpoints, DNS suffixes, or AMI owners, and SHALL derive partition-specific values dynamically.
+9. WHERE a feature is unavailable in the target partition THE design SHALL document the gap and select the partition-appropriate alternative rather than failing silently.
 10. WHEN a deployment completes in `airgapped` mode THEN a documented verification step SHALL confirm no component reaches the public internet during steady-state operation.
 
 ### Requirement 2: Provide an explicit VPC / networking module
@@ -102,7 +103,7 @@ Open questions to resolve in design (flagged, not yet decided):
 3. WHEN the module is applied THEN exactly one of the two paths SHALL be active, and providing conflicting inputs (e.g., `create_vpc = true` plus an existing `vpc_id`) SHALL produce a clear validation error.
 4. WHEN subnets are created THEN they SHALL carry the Kubernetes/EKS discovery tags required for load balancer and Auto Mode subnet selection.
 5. WHEN the connectivity profile is `connected` THEN the created VPC MAY provision NAT/IGW for outbound access.
-6. WHEN the connectivity profile is `airgapped` THEN the created VPC SHALL provision private subnets and the necessary VPC endpoints (at minimum: ECR API, ECR DKR, S3 gateway, EC2, STS, CloudWatch Logs, Elastic Load Balancing, SSM, SSMMessages, EC2Messages, and the endpoints EKS Auto Mode requires such as `eks` and `eks-auth`) and SHALL omit NAT gateways and internet gateways by default.
+6. WHEN the connectivity profile is `airgapped` THEN the created VPC SHALL provision private subnets and the necessary VPC endpoints (at minimum: ECR API, ECR DKR, S3 gateway, EC2, STS, CloudWatch Logs, Elastic Load Balancing, SSM, SSMMessages, EC2Messages, `aps` and `aps-workspaces` (AWS Managed Service for Prometheus), and the endpoints EKS Auto Mode requires such as `eks` and `eks-auth`) and SHALL omit NAT gateways and internet gateways by default.
 7. WHEN the VPC is created THEN DNS hostnames and DNS support SHALL be enabled (required for EKS private endpoint resolution).
 8. WHEN an existing VPC is consumed in the `airgapped` profile THEN the module SHALL document (and where possible validate) the VPC endpoints and tags the existing VPC must already provide.
 9. WHEN an ingress/routing layer is deployed THEN the module SHALL use classic Kubernetes `Ingress` (Mendix `endpoint.type = ingress`) fronted by an Application Load Balancer with an internal (non-internet-facing) scheme for the `airgapped` profile, using EKS Auto Mode's built-in ALB `IngressClass` (no controller to install). The `dev/pmp` branch currently disables NGINX ingress entirely (upstream `nginx-values.yaml` sets `scheme: internet-facing`); the modernized module SHALL remove the NGINX dependency in favor of the AWS-native ALB path. Gateway API is explicitly out of scope for this iteration (Auto Mode's built-in controller does not support it, and it would add an unused self-managed component); it MAY be revisited as a future enhancement.
@@ -119,8 +120,9 @@ Open questions to resolve in design (flagged, not yet decided):
 5. WHEN Auto Mode is enabled THEN the cluster IAM role SHALL include the additional permissions Auto Mode requires, including the permissions needed to manage any custom (non-`eks-cluster-sg-*`) security groups the module attaches.
 6. WHEN the EKS control-plane version is configurable THEN the default SHALL be a currently supported Kubernetes version, and the variable SHALL be documented as a customer-owned upgrade responsibility.
 7. WHEN Auto Mode is enabled THEN the module SHALL remove or disable the now-redundant resources it supersedes (EBS CSI driver IRSA, AWS Load Balancer Controller, cluster autoscaler) and document the change.
-8. IF the design-phase POC (see design §4) proves Auto Mode cannot operate in the target air-gapped configuration THEN a managed-node-group + Karpenter contingency SHALL be introduced and documented; this is not built unless the POC fails.
+8. IF the design-phase POC (see design §4) proves Auto Mode cannot operate in the target air-gapped configuration, THEN a managed-node-group + Karpenter contingency SHALL be introduced and documented; this is documentation-only and not built unless the POC fails.
 9. WHEN the modernized module is applied THEN `terraform validate`, `tflint`, and `tfsec`/equivalent SHALL pass with no new high-severity findings introduced by these changes.
+10. WHERE FIPS-validated node cryptography is required THE module SHALL support optionally enabling it on EKS Auto Mode via the Auto Mode node FIPS setting (`advancedSecurity.fips` on a custom NodeClass), defaulting to OFF for the demo; Auto Mode's FIPS option provides FIPS 140-2 validated modules and is available in GovCloud.
 
 ### Requirement 4: SSO / OIDC identity integration
 
@@ -155,21 +157,23 @@ Open questions to resolve in design (flagged, not yet decided):
 #### Acceptance Criteria
 1. WHEN secrets (database passwords, Grafana admin, namespace secrets, IdP client secrets) are created THEN they SHALL be stored in AWS Secrets Manager and SHALL NOT be exposed as plaintext Terraform outputs.
 2. WHEN resources are encrypted at rest THEN EBS, RDS, S3, and Secrets Manager SHALL use KMS encryption; customer-managed keys SHALL be supported (via the existing `kms_key_admin_arns_list` / `kms_key_user_arns_list` inputs) but AWS-managed keys are an acceptable default to keep the demo simple.
-3. WHERE PMP supports external secret storage THE module SHALL document how to integrate AWS Secrets Manager (or Vault) per PMP capabilities.
+3. WHEN PMP reads its own credentials (VCS PATs, build cluster token, Grafana API key, MDA/registry keys) THEN it SHALL read them directly from AWS Secrets Manager using IRSA, with secrets named under a documented prefix (e.g. `PMP-*`), and the IAM policy granting `secretsmanager:GetSecretValue` / `secretsmanager:DescribeSecret` SHALL be partition-neutral (the ARN partition SHALL be derived dynamically, not hardcoded to `aws`). The Secrets Store CSI Driver is NOT required for PMP's own credentials.
 4. WHEN sensitive values are passed to Helm THEN they SHALL be marked sensitive and SHALL NOT appear in plan output or logs.
+5. WHEN the Mendix operator's database/storage-plan secrets are provisioned THEN they SHALL follow a separate path from PMP's own credentials, entered at install time for the demo; the Secrets Store CSI Driver is optional and SHALL NOT be used for the demo.
 
 ### Requirement 7: PMP install/upgrade layer on top of the foundation
 
 **User Story:** As a partner operating PMP as a managed service, I want the Private Mendix Platform itself installed and upgraded as a distinct layer on top of the Terraform-provisioned foundation, so that I can apply PMP's recurring product updates without re-running infrastructure provisioning.
 
 #### Acceptance Criteria
-1. WHEN the platform is delivered THEN the boundary SHALL be explicit: Terraform provisions the AWS substrate plus the Mx4PC operator foundation, and a separate PMP install layer deploys the Private Mendix Platform (PCLM, portal, build tooling) on top.
+1. WHEN the platform is delivered THEN the boundary SHALL be explicit across three tiers: (a) Terraform provisions the AWS substrate plus the Mx4PC operator foundation; (b) a helmfile layer, run through the pipeline, installs PMP (PCLM, portal, build tooling) on top; and (c) PMP's own platform configuration — CI/CD build settings, VCS host, observability wiring, and Kubernetes cluster registration — is performed in the PMP admin panel (GUI) and captured as a documented runbook step, NOT automated as config-as-code (no supported API exists for it; automating it is out of scope as speculative — YAGNI).
 2. WHEN PMP is installed THEN it SHALL use Mendix's documented install mechanism (helmfile and `mx-pclm-cli`) rather than being reimplemented in Terraform.
 3. WHEN PMP must be updated THEN the install layer SHALL support repeatable, declarative re-apply (matching PMP's regular release cadence) without requiring a `terraform apply`.
-4. WHEN the install layer is operated THEN it SHALL be runnable through the CI/CD pipeline (Requirement 10), so PMP installs and upgrades are automated, reviewed, and auditable.
+4. WHEN the install layer is operated THEN the installation and upgrade of PMP SHALL be runnable through the CI/CD pipeline (Requirement 10) so installs and upgrades are automated, reviewed, and auditable, WHILE PMP's own platform configuration (tier (c) of 7.1) SHALL remain a documented manual admin-panel step rather than a pipeline-automated config-as-code step.
 5. WHERE the profile is `airgapped` THE PMP install layer SHALL source all charts, images, and binaries from the vendored in-partition sources defined in Requirement 5.
 6. WHEN the layering decision is documented THEN it SHALL state whether the Mx4PC operator bootstrap remains in Terraform (current `helm_release` pattern) or also moves to the pipeline, with the rationale.
 7. WHEN PMP is installed and tested for the demo THEN the workflow SHALL NOT require a production license; per Mendix guidance a trial license is applied after the platform is standing, so the build and lifecycle demo do not gate on licensing.
+8. WHEN PCLM is installed THEN it SHALL require Mendix Operator version 2.21.0 or later and SHALL use a dedicated PostgreSQL database; a separate database/role on the shared RDS instance is acceptable for the demo.
 
 ### Requirement 8: Enable the Mendix application build & deploy lifecycle
 
@@ -183,17 +187,19 @@ Open questions to resolve in design (flagged, not yet decided):
 5. WHEN an app is deployed THEN the configuration SHALL support deploying to another namespace in the same (or another) cluster, matching the certification's deployment requirement.
 6. WHERE the profile is `airgapped` THE build tooling image (`pmp-pipeline-tools`) and the mxbuild package source SHALL be served from in-partition sources (ECR / S3) per Requirement 5.
 7. WHEN the lifecycle is exercised THEN it SHALL be possible to create a new sample project in the in-cluster GitLab, commit a change, build the MDA, and deploy it, with the steps documented for the demo.
+8. WHEN the PMP Kubernetes-native CI/CD, build cluster, build images, and MDA storage settings are set THEN they SHALL be configured through the PMP admin panel and captured as a documented runbook step, consistent with the platform-configuration boundary in Requirement 7.
 
 ### Requirement 9: Observability stack compatible with PMP
 
 **User Story:** As a partner operating the platform, I want a monitoring and logging stack that PMP can integrate with, so that the platform UI can surface app logs and metrics and I can demonstrate day-2 ops.
 
 #### Acceptance Criteria
-1. WHEN observability is deployed THEN it SHALL provide Prometheus (metrics), Loki (logs), and Grafana (visualization), compatible with the versions PMP currently validates.
+1. WHEN observability is deployed THEN it SHALL provide AWS Managed Service for Prometheus (AMP) (metrics), Loki (logs), and Grafana (visualization), compatible with the versions PMP currently validates.
 2. WHEN PMP integrates with Grafana THEN the configuration SHALL use a single Loki data source and a single Prometheus data source (PMP does not support multiple of either).
 3. WHEN Grafana is exposed THEN it SHALL provide the API endpoints PMP requires (`/api/health`, `/api/datasources`, datasource proxy, Loki `query_range`, Prometheus labels/values, and `/api/ds/query`).
-4. WHERE the profile is `airgapped` THE observability components SHALL be installed from in-partition chart/image sources per Requirement 5, and SHALL NOT assume AWS managed Prometheus is available in the target partition.
-5. WHEN observability is provisioned THEN administrative credentials SHALL be stored in AWS Secrets Manager rather than rendered in plaintext outputs.
+4. WHEN metrics are provisioned THEN they SHALL use AWS Managed Service for Prometheus (AMP) as the metrics backend in both target partitions (`aws` and `aws-us-gov`). WHERE the profile is `airgapped` THE cluster SHALL reach AMP over the `aps` and `aps-workspaces` VPC interface endpoints (ADOT remote_write and Grafana queries) with no internet egress.
+5. WHERE the profile is `airgapped` THE observability components SHALL be installed from in-partition chart/image sources per Requirement 5 (Grafana, Loki, and ADOT charts and images come from in-partition ECR/S3 sources), while AMP itself is reached via the `aps` and `aps-workspaces` VPC interface endpoints.
+6. WHEN observability is provisioned THEN administrative credentials SHALL be stored in AWS Secrets Manager rather than rendered in plaintext outputs.
 
 ### Requirement 10: CI/CD pipeline for infrastructure, PMP, and app delivery
 
